@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Link</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 -960 960 960' width='24px' fill='%23e3e3e3'%3E%3Cpath d='M440-280H280q-83 0-141.5-58.5T80-480q0-83 58.5-141.5T280-680h160v80H280q-50 0-85 35t-35 85q0 50 35 85t85 35h160v80ZM320-440v-80h320v80H320Zm200 160v-80h160q50 0 85-35t35-85q0-50-35-85t-85-35H520v-80h160q83 0 141.5 58.5T880-480q0 83-58.5 141.5T680-280H520Z'/%3E%3C/svg%3E" type="image/svg+xml">
+  <link type="text/css" href="lib/ext-3.4.1/resources/css/ext-all.css" rel="stylesheet" />
+  <link type="text/css" href="res/css/app.css" rel="stylesheet" />
+  <link type="text/css" href="res/css/icons.css" rel="stylesheet" />
+  <script src="lib/ext-3.4.1/adapter/ext/ext-base.js"></script>
+  <script src="lib/ext-3.4.1/ext-all.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mobx@6.10.2/dist/mobx.umd.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+  <!-- <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6"></script> -->
+  <script src="src/util/store/list-store.js"></script>
+  <script src="src/util/store/object-store.js"></script>
+  <script src="src/util/download.js"></script>
+  <script src="src/x/state/filter-state.js"></script>
+  <script src="src/x/ui/x-filter.js"></script>
+  <script src="src/x/ui/x-preview.js"></script>
+  <script src="src/x/ui/x-options.js"></script>
+  <script src="src/x/ui/x-state.js"></script>
+  <script src="src/x/ui/x-state-manager.js"></script>
+  <script src="app-data.js"></script>
+  <script src="app-state.js"></script>
+  <script src="app.js"></script>
+</head>
+<body>
+  <script type="text/javascript">
+    // defaults
+    //Ext.Ajax.prototype.timeout = 5 * 60 * 1000
+    Ext.Panel.prototype.animCollapse = false
+    Ext.layout.AccordionLayout.prototype.animate = false
+    Ext.layout.BorderLayout.Region.prototype.floatable = false
+    Ext.grid.GridPanel.prototype.trackMouseOver = false
+    Ext.grid.GridPanel.prototype.stripeRows = true
+    Ext.grid.GridPanel.prototype.columnLines = true
+    Ext.grid.GridPanel.prototype.enableHdMenu = false
+    Ext.grid.GridPanel.prototype.enableColumnHide = false
+    Ext.grid.GridPanel.prototype.enableColumnMove = false
+    Ext.grid.PropertyGrid.prototype.trackMouseOver = false
+    Ext.grid.EditorGridPanel.prototype.trackMouseOver = false
+    Ext.tree.TreePanel.prototype.animate = false
+    Ext.tree.TreePanel.prototype.trackMouseOver = false
+
+    Ext.onReady(function () {
+      Ext.QuickTips.init()
+      app(app_state())
+    });
+  </script>
+</body>
+</html>

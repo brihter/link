@@ -1,0 +1,6 @@
+{
+  "app_name": "link",
+  "app_port": 3001,
+  "log_level": "info",
+  "neo4j_host": "bolt://localhost:7687"
+}

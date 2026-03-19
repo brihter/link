@@ -1,0 +1,52 @@
+.mg-4 {margin: 0 4px !important;}
+.mg-6 {margin: 0 6px !important;}
+.mg-8 {margin: 0 8px !important;}
+
+.header {
+  line-height: 15px;
+  font-size: 11px;
+  font-family: tahoma,arial,verdana,sans-serif;
+  color: #222;
+  font-weight: normal;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+.header .header-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+}
+
+.header strong {font-weight: bold;}
+
+.footer .funding {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  font-size: 11px;
+  font-family: tahoma,arial,verdana,sans-serif;
+  color: #222;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+.footer .funding p {
+  margin: 0;
+}
+
+div.x-toolbar.overview-tbar-options {
+  padding-left: 4px;
+}
+
+.overview-tbar-options input.x-form-checkbox {
+  margin: 0 0 0 4px;
+}
+
+.overview-tbar-options label.x-form-cb-label {
+  position:unset;
+  vertical-align: top;
+  margin: 0 0 0 4px;
+}

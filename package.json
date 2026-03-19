@@ -1,0 +1,38 @@
+{
+  "name": "link",
+  "version": "1.0.0",
+  "description": "Link is an analytical tool for the integration, cleaning, merging and visualization of complex stratigraphic and spatial cemetery data.",
+  "main": "src/_index.mjs",
+  "scripts": {
+    "start": "./bin/start.sh",
+    "process": "./bin/process.sh"
+  },
+  "author": "Bostjan Rihter",
+  "license": "CC-BY-NC-SA-4.0",
+  "dependencies": {
+    "@brighter/storage-adapter-local": "^1.5.2",
+    "connect-timeout": "^1.9.0",
+    "csv-parse": "^5.5.0",
+    "csv-stringify": "^6.4.2",
+    "express": "^4.18.2",
+    "express-async-handler": "^1.2.0",
+    "lodash-es": "^4.17.21",
+    "neo4j-driver": "^5.13.0",
+    "pg": "^8.13.3",
+    "pino": "^8.15.1",
+    "sqlite": "^5.0.1",
+    "sqlite3": "^6.0.1",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "prettier": "^3.0.3"
+  },
+  "prettier": {
+    "trailingComma": "none",
+    "tabWidth": 2,
+    "semi": false,
+    "singleQuote": true,
+    "arrowParens": "avoid"
+  }
+}
