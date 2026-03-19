@@ -1,6 +1,6 @@
 # Link
 
-Link is an analytical tool for processing complex stratigraphic and spatial cemetery data. It integrates, cleans, merges, analyses, solves chronologies and visualizes heterogeneous archaeological datasets — clarifying both the possibilities and the limits of archaeological chronology in contexts of extensive cemetery stratigraphy.
+Link is an analytical tool for processing complex stratigraphic and spatial cemetery data. It integrates, cleans, merges, analyses, solves chronologies and visualizes heterogeneous archaeological datasets, clarifying both the possibilities and the limits of archaeological chronology in contexts of extensive cemetery stratigraphy.
 
 Link formalizes archaeological reasoning in a way that is computationally explicit, analytically reproducible and open to critical inspection.
 
