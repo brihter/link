@@ -1,12 +1,14 @@
 # Link
 
-Link is an analytical tool for the integration, cleaning, merging and visualization of complex stratigraphic and spatial cemetery data.
+Link is an analytical tool for processing complex stratigraphic and spatial cemetery data. It integrates, cleans, merges, analyses, solves chronologies and visualizes heterogeneous archaeological datasets — clarifying both the possibilities and the limits of archaeological chronology in contexts of extensive cemetery stratigraphy.
 
-The tool was developed as part of the research project *Analysis of the Župna Cerkev Cemetery in Kranj (Slovenia) (Z6-4608)* and is designed to formalize archaeological reasoning in a way that is computationally explicit, analytically reproducible and open to critical inspection.
-
-Link processes heterogeneous archaeological datasets through a pipeline of loading, merging, analysis, chronological solving and visualization, producing outputs that clarify both the possibilities and the limits of archaeological chronology in contexts of extensive cemetery stratigraphy.
+Link formalizes archaeological reasoning in a way that is computationally explicit, analytically reproducible and open to critical inspection.
 
 A live deployment is available at [link.zrc-sazu.si](https://link.zrc-sazu.si/).
+
+## Funding
+
+Link arose as a conceptual product of the research project (Z6-4608) *Analysis of the Župna Cerkev Cemetery in Kranj (Slovenia)* and the complementary project *SRI-2503 RSF*, which ensured the reproducibility of all dating procedures and laid the foundations for further research of this cemetery. Both projects were funded by the Slovenian Research and Innovation Agency (ARIS), with SRI-2503 RSF providing funds dedicated to the development of modern research infrastructure.
 
 ## References
 
