@@ -8,7 +8,7 @@ A live deployment is available at [link.zrc-sazu.si](https://link.zrc-sazu.si/).
 
 ## Funding
 
-Link arose as a conceptual product of the research project (Z6-4608) *Analysis of the Župna Cerkev Cemetery in Kranj (Slovenia)* and the complementary project *SRI-2503 RSF*, which ensured the reproducibility of all dating procedures and laid the foundations for further research of this cemetery. Both projects were funded by the Slovenian Research and Innovation Agency (ARIS), with SRI-2503 RSF providing funds dedicated to the development of modern research infrastructure.
+Link originated within the research project Z6-4608, Analysis of the Župna Cerkev Cemetery in Kranj (Slovenia), where its concept was developed, and was subsequently developed into a research product within the complementary project SRI-2503 RSF. Both projects were funded by the Slovenian Research and Innovation Agency (ARIS).
 
 ## References
 
