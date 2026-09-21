@@ -1,90 +1,106 @@
 import { v4 as uuid } from 'uuid'
-import { dirname } from 'path'
-import { fileURLToPath } from 'url'
 import express from 'express'
 import expressAsyncHandler from 'express-async-handler'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
 const routerVisualize = express.Router()
+
+const visualizationRequest = handler => expressAsyncHandler(async (req, res) => {
+  const controller = new AbortController()
+  const onClose = () => {
+    if (!res.writableFinished) controller.abort()
+  }
+  res.once('close', onClose)
+  if (res.destroyed) onClose()
+  try {
+    controller.signal.throwIfAborted()
+    await handler(req, res, controller.signal)
+  } catch (error) {
+    if (!controller.signal.aborted || error?.name !== 'AbortError') throw error
+  } finally {
+    res.removeListener('close', onClose)
+  }
+})
 
 routerVisualize.get(
   '/:reportName.dot',
-  expressAsyncHandler(async (req, res) => {
+  visualizationRequest(async (req, res, signal) => {
     const params = JSON.parse(req.query.filter)
     params.format = 'dot'
-
     const response = await req.app.visualize({
       name: req.params.reportName,
       params
-    })
-
+    }, { signal })
     res.send(response.content)
   })
 )
 
 routerVisualize.get(
   '/:reportName.svg',
-  expressAsyncHandler(async (req, res) => {
+  visualizationRequest(async (req, res, signal) => {
     const params = JSON.parse(req.query.filter)
     params.format = 'svg'
-
     const response = await req.app.visualize({
       name: req.params.reportName,
       params
-    })
-
-    res.sendFile(response.content, {
-      root: `${__dirname}/../../../`
-    })
+    }, { signal })
+    res.sendFile(response.content)
   })
 )
 
 routerVisualize.get(
   '/:reportName.:format/download',
-  expressAsyncHandler(async (req, res) => {
+  visualizationRequest(async (req, res, signal) => {
     const params = JSON.parse(req.query.filter)
     params.format = req.params.format
-
     const response = await req.app.visualize({
       name: req.params.reportName,
       params
-    })
+    }, { signal })
+    if (params.format === 'csv') {
+      res.attachment(`${uuid()}.csv`)
+      res.send(response.content)
+      return
+    }
+  
+    res.download(response.content, `${uuid()}.${params.format}`)
+  })
+)
 
-    res.download(
-      `${__dirname}/../../../${response.content}`,
-      `${uuid()}.${params.format}`
-    )
+routerVisualize.post(
+  '/table/data',
+  visualizationRequest(async (req, res, signal) => {
+    const params = req.body || {}
+    params.format = 'json'
+    const response = await req.app.visualize({
+      name: 'table',
+      params
+    }, { signal })
+    res.json(response)
   })
 )
 
 routerVisualize.post(
   '/:reportName',
-  expressAsyncHandler(async (req, res) => {
+  visualizationRequest(async (req, res, signal) => {
     const params = req.body || {}
     params.format = 'svg'
-
     const response = await req.app.visualize({
       name: req.params.reportName,
       params
-    })
-
-    res.sendFile(response.content, {
-      root: `${__dirname}/../../../`
-    })
+    }, { signal })
+    res.sendFile(response.content)
   })
 )
 
 routerVisualize.post(
   '/:reportName/stats',
-  expressAsyncHandler(async (req, res) => {
+  visualizationRequest(async (req, res, signal) => {
     const params = req.body || {}
-    params.format = 'svg'
-
+    params.format = 'stats'
     const response = await req.app.visualize({
       name: req.params.reportName,
       params
-    })
-
+    }, { signal })
     res.json(response.stats)
   })
 )

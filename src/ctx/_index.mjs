@@ -4,6 +4,7 @@ import { initTimezone } from './providers/timezone.mjs'
 import { initTrace } from './providers/trace.mjs'
 import { initLogger } from './providers/logger.mjs'
 import { initStorage } from './providers/storage.mjs'
+import { initGraphviz } from './providers/graphviz.mjs'
 import { initSQLite } from './providers/sqlite.mjs'
 import { initNeo4J, destroyNeo4J } from './providers/neo4j.mjs'
 
@@ -16,6 +17,7 @@ const ctx = async (bootConfig = {}) => {
   const trace = await initTrace()
   const logger = await initLogger({ config, trace })
   const storage = await initStorage()
+  const graphviz = initGraphviz({ storage })
   const sqlite = await initSQLite()
   const neo4j = await initNeo4J({ config })
 
@@ -37,6 +39,7 @@ const ctx = async (bootConfig = {}) => {
     trace,
     logger,
     storage,
+    graphviz,
     sqlite,
     neo4j,
 
@@ -45,6 +48,7 @@ const ctx = async (bootConfig = {}) => {
 }
 
 const unctx = async ctx => {
+  await ctx.graphviz.close()
   ctx = await destroyNeo4J(ctx)
 }
 

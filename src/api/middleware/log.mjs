@@ -45,15 +45,21 @@ const log = (req, res, next) => {
     timer.stop = process.hrtime(timer.start)
     timer.elapsed = hrToMs(timer.stop)
 
-    req.logger.info('api:request', {
+    const entry = {
       params: {
-        status: res.statusCode,
+        status: res.headersSent ? res.statusCode : null,
         method: req.method,
         url: req.originalUrl,
         headers: omit(req.headers, omitHeaders),
         elapsed: timer.elapsed
       }
-    })
+    }
+
+    if (res.writableFinished) {
+      req.logger.info('api:request', entry)
+    } else {
+      req.logger.warn('api:aborted', entry)
+    }
   })
 
   next()

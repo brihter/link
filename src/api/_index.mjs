@@ -15,6 +15,7 @@ import { routerExport } from './routes/export.mjs'
 import { routerAnalyze } from './routes/analyze.mjs'
 import { routerVisualize } from './routes/visualize.mjs'
 import { routerState } from './routes/state.mjs'
+import { routerCubes } from './routes/cubes.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -37,9 +38,13 @@ const api = app => {
   web.use('/solve', routerSolve)
   web.use('/export', routerExport)
   web.use('/analyze', routerAnalyze)
-  web.use('/visualize', routerVisualize)
+  web.use('/visualize', (req, res, next) => {
+    req.clearTimeout()
+    next()
+  }, routerVisualize)
   web.use('/status', routerStatus)
   web.use('/state', routerState)
+  web.use('/cubes', routerCubes)
   web.use('/', express.static(join(__dirname + '/static')))
 
   // errors

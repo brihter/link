@@ -1,6 +1,29 @@
 Ext.ns('app')
+const borderWidthStyles = {
+  b: 'border-bottom-width',
+  l: 'border-left-width',
+  r: 'border-right-width',
+  t: 'border-top-width'
+}
+
+// ext 3 truncates fractional border widths and breaks layouts at non-integer display scales
+Ext.Element.addMethods({
+  getBorderWidth: function (sides) {
+    let totalWidth = 0
+
+    for (let index = 0; index < sides.length; index += 1) {
+      const style = borderWidthStyles[sides[index]]
+      const width = style ? parseFloat(this.getStyle(style)) : 0
+      totalWidth += width ? Math.abs(width) : 0
+    }
+
+    return totalWidth
+  }
+})
+
 
 app = state => {
+
   new Ext.Viewport({
     renderTo: Ext.getBody(),
     layout: 'border',
@@ -74,25 +97,22 @@ app = state => {
       {
         xtype: 'container',
         region: 'east',
-        width: 200,
+        width: 240,
         margins: '4px 4px 4px 0',
         layout: {
           type: 'vbox',
           align: 'stretch'
         },
-        defaults: {
-          xtype: 'panel',
-          layout: 'accordion',
-          layoutConfig: {
-            hideCollapseTool: true,
-            titleCollapse: false
-          },
-          flex: 3,
-          margins: '0 0 4px 0'
-        },
         items: [
           {
+            xtype: 'panel',
             height: 63,
+            layout: 'accordion',
+            layoutConfig: {
+              hideCollapseTool: true,
+              titleCollapse: false
+            },
+            margins: '0 0 4px 0',
             items: [
               {
                 xtype: 'form',
@@ -112,17 +132,20 @@ app = state => {
                     store: new Ext.data.ArrayStore({
                       id: 'type',
                       fields: ['type', 'name'],
-                      data: [
-                        ['node', 'Node'],
-                        ['node-paths', 'Node Paths']
-                      ]
+                      data: state.views.map(view => [view.name, view.label])
                     }),
                     valueField: 'type',
                     value: state.filterState.view.get('name'),
                     displayField: 'name',
                     listeners: {
-                      select: (c, r, i) => {
-                        state.filterState.view.set('name', r.data.type)
+                      afterrender: combo => {
+                        const dispose = mobx.autorun(() => {
+                          combo.setValue(state.filterState.view.get('name'))
+                        })
+                        combo.on('destroy', dispose)
+                      },
+                      select: (_combo, record) => {
+                        state.filterState.view.set('name', record.data.type)
                       }
                     }
                   }
@@ -131,27 +154,38 @@ app = state => {
             ]
           },
           {
-            items: [
-              {
-                xtype: 'x-options',
-                border: false,
-                padding: '6px 8px',
-                title: 'View Settings',
-                state: state.filterState.viewSettings
-              }
-            ]
-          },
-          {
+            xtype: 'x-options',
+            border: true,
+            flex: 3,
+            hideWhenEmpty: true,
+            layout: 'form',
             margins: '0',
-            items: [
-              {
-                xtype: 'x-options',
-                border: false,
-                padding: '6px 8px',
-                title: 'View Attributes',
-                state: state.filterState.viewAttributes
-              }
-            ]
+            padding: '6px 8px',
+            title: 'View Settings',
+            resolveSections: () => {
+              const viewName = state.filterState.view.get('name')
+              const view = state.views.find(candidate => candidate.name === viewName)
+              const settingDefinitions = viewName === 'table'
+                ? app_data.getCube(state.filterState.cube.get('name')).columns.map(column => ({
+                  key: `columns.${column.key}`,
+                  label: column.label,
+                  group: 'Columns'
+                }))
+                : view.settingDefinitions
+              const settingKeys = new Set(settingDefinitions.map(definition => definition.key))
+              return [
+                {
+                  store: state.filterState.viewSettings,
+                  optionDefinitions: settingDefinitions,
+                  filterOption: key => settingKeys.has(key)
+                },
+                {
+                  title: 'Attributes',
+                  store: state.filterState.viewAttributes,
+                  optionDefinitions: view.attributeDefinitions
+                }
+              ]
+            }
           }
         ]
       },

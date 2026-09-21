@@ -1,60 +1,98 @@
-import { cloneDeep, mapValues, groupBy } from 'lodash-es'
-import { v4 as uuid } from 'uuid'
-
 const escape = v => v.replace(/"/g, '\\"')
 
+const STRATIGRAPHIC_RELATIONSHIPS = Object.freeze({
+  vertical: Object.freeze(['ABOVE', 'LATER']),
+  context: Object.freeze(['CONTEMPORARY'])
+})
+
+const noticeResult = (keys, title, message, stats) => {
+  return {
+    keys,
+    paths: [],
+    stats: { ...stats, Status: title },
+    notice: { title, message }
+  }
+}
+
+const escapeDotString = value => value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+const escapeDotHtml = value => String(value)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;')
+
+
+const renderNotice = (notice, flt) => {
+  const rankdir = flt.viewSettings && flt.viewSettings['graph.flip'] ? 'LR' : 'TB'
+  const label = `${escapeDotString(notice.title)}\\n${escapeDotString(notice.message)}`
+
+  return `
+    digraph g {
+      graph [
+        fontname = "Helvetica"
+        rankdir = "${rankdir}"
+      ];
+
+      node [
+        shape = "note"
+        fontsize = 12
+        fontname = "Helvetica"
+        margin = 0.15
+      ];
+
+      notice [label = "${label}"];
+    }
+  `
+}
+
 const render = (flt, data) => {
+  const selectedKeys = flt.viewSettings['graph.highlight'] ? new Set(data.keys.nodes) : null
+
   const renderOrientation = () => {
     return flt.viewSettings['graph.flip'] ? 'LR' : 'TB'
   }
 
-  function sortSwap(array, string1, string2) {
-    const i1 = array.indexOf(string1)
-    const i2 = array.indexOf(string2)
-    if (i1 !== -1 && i2 !== -1) {
-      [array[i1], array[i2]] = [array[i2], array[i1]]
-    }
-    return array
-  }
-
-  function sort(entries, orderKeys) {
-    entries.sort((a, b) => {
-      const indexA = orderKeys.indexOf(a[0])
-      const indexB = orderKeys.indexOf(b[0])
-      if (indexA !== -1 && indexB !== -1) return indexA - indexB
-      if (indexA !== -1) return -1
-      if (indexB !== -1) return 1
-      return 0
-    })
-    return entries
-  }
-
-  const sortAttributes = (entries) => {
+  const sortAttributes = entries => {
     if (!flt.viewSettings['graph.flip']) {
-      const sortOrder = sortSwap(entries.map(([key,]) => key), 'ts_from', 'ts_to')
-      entries = sort(entries, sortOrder)
+      const fromIndex = entries.findIndex(([key]) => key === 'ts_from')
+      const toIndex = entries.findIndex(([key]) => key === 'ts_to')
+      if (fromIndex !== -1 && toIndex !== -1) {
+        const from = entries[fromIndex]
+        entries[fromIndex] = entries[toIndex]
+        entries[toIndex] = from
+      }
     }
     return entries
+  }
+
+  const renderC14Tooltip = measurements => {
+    const count = `${measurements.length} C-14 measurement${measurements.length === 1 ? '' : 's'}`
+    const details = measurements
+      .map(measurement => {
+        const reference = measurement.chrono_source_ref || 'n/a'
+        return `${measurement.chrono_from}-${measurement.chrono_to} (${reference})`
+      })
+      .join('\\n')
+
+    return `"${escape(`${count}\\n${details}`)}"`
   }
 
   const renderNode = node => {
+    const entity = node.labels[0].toLowerCase()
+    const measurementKey = `${entity}|${node.properties.key}`
+    const c14Measurements = data.c14Measurements?.[measurementKey] || []
+    const showC14 = flt.viewSettings.c14 && c14Measurements.length > 0
     let header = node.properties.key
-
-    if (node.labels.includes('Item')) {
-      if (node.properties.type) header = node.properties.type
-      if (node.properties.subtype) header = node.properties.subtype
-    }
 
     let label = `"${escape(header)}"`
 
     if (flt.viewSettings['show.attributes']) {
-      const entity = node.labels[0].toLowerCase()
-
       const attrs = sortAttributes(Object.entries(node.properties))
-        .filter(([key]) => key !== 'name' && key !== 'ts_trace' && flt.viewAttributes[`${entity}.${key}`])
+        .filter(([key]) => key !== 'name' && key !== 'ts_trace' && flt.viewAttributes[key])
         .map(([key, val]) => `${key.replace('attr_', '').replace('item_', '')}: ${val}`)
 
-      const srcs = flt.viewAttributes[`${entity}.ts_trace`] && node.properties.ts_trace
+      const srcs = flt.viewAttributes.ts_trace && node.properties.ts_trace
         ? node.properties.ts_trace.map(s => `${s.ts_from}-${s.ts_to}, ${s.source || 'n/a'}, ${s.operation}`)
         : []
 
@@ -87,12 +125,12 @@ const render = (flt, data) => {
 
     let fillcolor = ''
     let style = ''
-    if (flt.viewSettings['graph.highlight']) {
-      if (data.keys.nodes.includes(node.properties.key)) {
+    if (showC14) {
+      fillcolor = 'lightcoral'
+      style = 'filled'
+    } else if (flt.viewSettings['graph.highlight']) {
+      if (selectedKeys.has(node.properties.key)) {
         fillcolor = 'yellow'
-        style = 'filled'
-      } else if (node.labels.includes('Item')) {
-        fillcolor = 'gray90'
         style = 'filled'
       }
     }
@@ -101,7 +139,8 @@ const render = (flt, data) => {
       ['label', label],
       ['shape', shape],
       ['fillcolor', fillcolor],
-      ['style', style]
+      ['style', style],
+      ['tooltip', showC14 ? renderC14Tooltip(c14Measurements) : '']
     ]
 
     return `
@@ -114,52 +153,118 @@ const render = (flt, data) => {
     `
   }
 
-  const renderRelationship = segment => {
+  const findContemporaryRank = node => {
+    let root = node
+    while (root.parent) root = root.parent
+    while (node.parent) {
+      const parent = node.parent
+      node.parent = root
+      node = parent
+    }
+    return root
+  }
+
+  const addContemporaryRank = (ranks, nodeIds) => {
+    let root
+    for (const nodeId of nodeIds) {
+      let rank = ranks.get(nodeId)
+      if (!rank) {
+        rank = { parent: null, size: 1, minimum: nodeId }
+        ranks.set(nodeId, rank)
+      }
+      rank = findContemporaryRank(rank)
+      if (!root) {
+        root = rank
+        continue
+      }
+      if (root === rank) continue
+
+      // preserve first-seen order and the smallest id independently of the union tree.
+      if (root.size < rank.size) {
+        const previousRoot = root
+        root = rank
+        rank = previousRoot
+      }
+      rank.parent = root
+      root.size += rank.size
+      if (rank.minimum < root.minimum) root.minimum = rank.minimum
+    }
+  }
+
+  const renderRelationshipLabel = label => {
+    if (label.length === 0) return ''
+    return `label="${escape(label)}"`
+  }
+
+  const getRelationshipLabelNodeId = (segment, inlineRelationshipLabels) => {
+    const label = flt.viewSettings['graph.labels'] ? segment.relationship.type : ''
+    return label.length > 0 && inlineRelationshipLabels
+      ? `relationship-label|${segment.relationship.elementId}`
+      : null
+  }
+
+  const renderRelationship = (segment, options) => {
+    const {
+      contemporaryRanks,
+      inlineRelationshipLabels,
+      rankContemporary
+    } = options
     const node = segment.relationship
     const [from, to] = flt.viewSettings['graph.flip']
       ? [node.endNodeElementId, node.startNodeElementId]
       : [node.startNodeElementId, node.endNodeElementId]
     const style = node.type === 'CONTEMPORARY' ? 'dashed' : 'solid'
 
-    if (flt.viewSettings['graph.connect'] && node.type === 'CONTEMPORARY') {
-      const id = mapContemporary.get(from) || mapContemporary.get(to) || uuid()
-      mapContemporary.set(from, id)
-      mapContemporary.set(to, id)
-    }
-
     const label = flt.viewSettings['graph.labels'] ? node.type : ''
-    return `"${from}" -> "${to}" [ style="${style}" label="${label}" ];`
-  }
+    const labelNodeId = getRelationshipLabelNodeId(segment, inlineRelationshipLabels)
 
-  const toSegment = (path, ix) => {
-    path.segments.forEach(s => (s._id = ix))
-    return path.segments
-  }
-
-  const toChain = segment => {
-    if (flt.viewSettings['graph.connect'] === true) {
-      return segment
+    if (rankContemporary && node.type === 'CONTEMPORARY') {
+      const rankNodes = labelNodeId ? [from, labelNodeId, to] : [from, to]
+      addContemporaryRank(contemporaryRanks, rankNodes)
     }
 
-    const newSegment = cloneDeep(segment)
-    newSegment.start.elementId = `${segment._id}|${segment.start.elementId}`
-    newSegment.end.elementId = `${segment._id}|${segment.end.elementId}`
-    newSegment.relationship.elementId = `${segment._id}|${segment.relationship.elementId}`
-    newSegment.relationship.startNodeElementId = `${segment._id}|${segment.relationship.startNodeElementId}`
-    newSegment.relationship.endNodeElementId = `${segment._id}|${segment.relationship.endNodeElementId}`
+    if (labelNodeId) {
+      return [
+        `"${from}" -> "${labelNodeId}" [ style="${style}" ];`,
+        `"${labelNodeId}" [ label="${escape(label)}" shape="plain" margin=0 ];`,
+        `"${labelNodeId}" -> "${to}" [ style="${style}" ];`
+      ].join('\n')
+    }
 
-    return newSegment
+    const relationshipLabel = renderRelationshipLabel(label)
+    return `"${from}" -> "${to}" [ style="${style}" ${relationshipLabel} ];`
+  }
+
+  const toChain = (segment, pathId) => {
+    return {
+      ...segment,
+      start: {
+        ...segment.start,
+        elementId: `${pathId}|${segment.start.elementId}`
+      },
+      end: {
+        ...segment.end,
+        elementId: `${pathId}|${segment.end.elementId}`
+      },
+      relationship: {
+        ...segment.relationship,
+        elementId: `${pathId}|${segment.relationship.elementId}`,
+        startNodeElementId: `${pathId}|${segment.relationship.startNodeElementId}`,
+        endNodeElementId: `${pathId}|${segment.relationship.endNodeElementId}`
+      }
+    }
   }
 
   const renderCluster = (clusters, opts = {}) => {
     return Object.keys(clusters)
       .map((id, ix) => {
         const label = opts.label ? `label="${opts.label(id)}"` : ''
+        const name = opts.name ? opts.name(id, ix) : `cluster_${ix}`
         const peripheries = 'peripheries' in opts ? `peripheries="${opts.peripheries}"` : ''
         const rank = opts.rank ? `rank=${opts.rank}` : ''
 
         return `
-          subgraph "cluster_${ix}" {
+          subgraph "${name}" {
             ${label}
             ${peripheries}
             ${rank}
@@ -170,60 +275,137 @@ const render = (flt, data) => {
       .join('\n')
   }
 
-  const renderNodes = nodes => {
-    return nodes.map(renderNode).join('\n')
+  const renderContemporary = contemporaryRanks => {
+    const contemporary = Object.create(null)
+    for (const [node, rank] of contemporaryRanks) {
+      const subgraph = findContemporaryRank(rank).minimum
+      if (!contemporary[subgraph]) contemporary[subgraph] = []
+      contemporary[subgraph].push(node)
+    }
+    return renderCluster(contemporary, {
+      name: id => `rank_${escape(id)}`,
+      peripheries: 0,
+      rank: 'same'
+    })
   }
 
-  const mapContemporary = new Map()
-
-  const renderContemporary = mapContemporary => {
-    const entries = [...mapContemporary.entries()].map(([node, subgraph]) => ({ node, subgraph }))
-    const contemporary = mapValues(groupBy(entries, 'subgraph'), v => v.map(i => i.node))
-    return renderCluster(contemporary, { peripheries: 0, rank: 'same' })
+  const getPhase = node => {
+    const phase = node.properties.phase
+    if (phase === undefined || phase === null || phase === '') return null
+    return String(phase)
   }
 
-  const renderPaths = paths => {
-    const nodeLookup = new Set()
-    const pathLookup = new Set()
+  const renderPhaseGroups = (segments, options) => {
+    if (flt.viewSettings['graph.group.phase'] !== true) return ''
 
-    const toPath = segment => {
-      const row = []
-
-      if (!nodeLookup.has(segment.start.elementId)) {
-        row.push(renderNode(segment.start))
-        nodeLookup.add(segment.start.elementId)
-      }
-
-      if (!nodeLookup.has(segment.end.elementId)) {
-        row.push(renderNode(segment.end))
-        nodeLookup.add(segment.end.elementId)
-      }
-
-      if (!pathLookup.has(segment.relationship.elementId)) {
-        row.push(renderRelationship(segment))
-        pathLookup.add(segment.relationship.elementId)
-      }
-
-      return row
+    const phases = new Map()
+    const addNode = (phase, nodeId) => {
+      if (phase === null || nodeId === null) return
+      if (!phases.has(phase)) phases.set(phase, new Set())
+      phases.get(phase).add(nodeId)
     }
 
-    let result = paths
-      .flatMap(toSegment)
-      .map(toChain)
-      .flatMap(toPath)
-      .join('\n')
+    for (const segment of segments) {
+      const startPhase = getPhase(segment.start)
+      const endPhase = getPhase(segment.end)
+      addNode(startPhase, segment.start.elementId)
+      addNode(endPhase, segment.end.elementId)
 
+      if (startPhase !== null && startPhase === endPhase) {
+        const labelNodeId = getRelationshipLabelNodeId(
+          segment,
+          options.inlineRelationshipLabels === true
+        )
+        addNode(startPhase, labelNodeId)
+      }
+    }
+
+    return [...phases.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([phase, nodeIds]) => {
+        const clusterName = options.clusterScope
+          ? `${options.clusterScope}_phase_${phase}`
+          : `phase_${phase}`
+        const elementId = options.clusterScope
+          ? `${options.clusterScope}-phase-${phase}`
+          : `phase-${phase}`
+
+        return `
+          subgraph "cluster_${escapeDotString(clusterName)}" {
+            graph [
+              label = <<b>Phase: ${escapeDotHtml(phase)}</b>>
+              labelloc = "t"
+              labeljust = "l"
+              style = "rounded,filled"
+              color = "#64748b"
+              fillcolor = "#f8fafc"
+              penwidth = 1
+              margin = 12
+              id = "${escapeDotString(elementId)}"
+              class = "phase-cluster"
+            ];
+
+            ${[...nodeIds]
+              .sort((left, right) => left.localeCompare(right))
+              .map(nodeId => `"${escapeDotString(nodeId)}";`)
+              .join('\n')}
+          }
+        `
+      })
+      .join('\n')
+  }
+
+  const renderPaths = (paths, options = {}) => {
+    const nodeLookup = new Set()
+    const pathLookup = new Set()
+    const contemporaryRanks = new Map()
+    const relationshipOptions = {
+      contemporaryRanks,
+      rankContemporary: options.rankContemporary !== false,
+      inlineRelationshipLabels: options.inlineRelationshipLabels === true
+    }
+    const connected = flt.viewSettings['graph.connect'] === true
+    const phaseSegments = flt.viewSettings['graph.group.phase'] === true ? [] : null
+    const getPathId = options.getPathId || ((path, index) => index)
+    const rows = []
+
+    for (let index = 0; index < paths.length; index++) {
+      const path = paths[index]
+      const pathId = getPathId(path, index)
+      for (const sourceSegment of path.segments) {
+        const segment = connected ? sourceSegment : toChain(sourceSegment, pathId)
+        if (phaseSegments) phaseSegments.push(segment)
+
+        if (!nodeLookup.has(segment.start.elementId)) {
+          rows.push(renderNode(segment.start))
+          nodeLookup.add(segment.start.elementId)
+        }
+
+        if (!nodeLookup.has(segment.end.elementId)) {
+          rows.push(renderNode(segment.end))
+          nodeLookup.add(segment.end.elementId)
+        }
+
+        if (!pathLookup.has(segment.relationship.elementId)) {
+          rows.push(renderRelationship(segment, relationshipOptions))
+          pathLookup.add(segment.relationship.elementId)
+        }
+      }
+    }
+
+    let result = rows.join('\n')
     result += `\n`
-    result += renderContemporary(mapContemporary)
+    if (phaseSegments) result += renderPhaseGroups(phaseSegments, options)
+    result += `\n`
+    result += renderContemporary(contemporaryRanks)
 
     return result
   }
 
   return {
     renderOrientation,
-    renderNodes,
     renderPaths
   }
 }
 
-export { render }
+export { render, noticeResult, renderNotice, STRATIGRAPHIC_RELATIONSHIPS }

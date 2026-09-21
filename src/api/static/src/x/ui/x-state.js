@@ -88,7 +88,7 @@ X.ui.State = Ext.extend(Ext.form.FormPanel, {
       return
     }
 
-    state.load(selectedState.state)
+    mobx.untracked(() => state.load(selectedState.state))
   }
 })
 

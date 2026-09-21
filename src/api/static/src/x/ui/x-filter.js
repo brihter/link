@@ -4,154 +4,317 @@ X.Filter = Ext.extend(Ext.form.FormPanel, {
   autoScroll: true,
 
   constructor: function (config) {
+    config = Ext.apply({}, config)
+    config.bbar = {
+      xtype: 'toolbar',
+      cls: 'filter-bbar-help',
+      height: 27,
+      items: [
+        {
+          xtype: 'label',
+          cls: 'filter-help',
+          html: '<strong>%</strong> matches zero or more characters with <strong>LIKE</strong>.'
+        }
+      ]
+    }
+
     X.Filter.superclass.constructor.apply(this, [config])
-    mobx.autorun(() => this.updateState(this.state.filterState.filters))
+    this._disposeState = mobx.autorun(() => {
+      this.state.filterState.cube.get('name')
+      mobx.toJS(this.state.filterState.filters)
+      this.updateState()
+    })
+    this.on(
+      'destroy',
+      function () {
+        this._disposeState()
+      },
+      this
+    )
   },
 
-  renderFilters: function () {
-    const toFilter = f => {
-      return {
-        xtype: 'container',
-        layout: 'hbox',
-        style: 'margin: 0 0 8px 0;',
-        defaults: {
-          hideLabel: true,
-          flex: 1,
-          margins: '0 4px 0 0'
+  getCube: function () {
+    return app_data.getCube(this.state.filterState.cube.get('name'))
+  },
+
+  getFilterDefinition: function (cube, filter) {
+    return cube.filters.find(definition => definition.attribute === filter.attribute)
+  },
+
+  getDefaultFilter: function (cube) {
+    const definition = cube.filters[0]
+    return {
+      attribute: definition.attribute,
+      operator: definition.operators[0],
+      value: ''
+    }
+  },
+
+  getOperatorLabel: function (operator) {
+    const labels = {
+      in: 'is',
+      'not in': 'is not',
+      like: 'matches',
+      'not like': 'not match'
+    }
+    return labels[operator] || operator
+  },
+
+  renderCondition: function (cube, group, filter) {
+    const definition = this.getFilterDefinition(cube, filter)
+    const operators = definition ? definition.operators : []
+    const attributes = cube.filters.map(item => [
+      item.attribute,
+      item.label
+    ])
+
+    return {
+      xtype: 'container',
+      cls: 'filter-condition',
+      layout: 'hbox',
+      anchor: '100%',
+      defaults: {
+        hideLabel: true,
+        margins: '0 4px 0 0'
+      },
+      items: [
+        {
+          xtype: 'combo',
+          name: 'attribute',
+          emptyText: 'Attribute',
+          triggerAction: 'all',
+          mode: 'local',
+          forceSelection: true,
+          editable: false,
+          flex: 3,
+          margins: '0 4px 0 3px',
+          store: new Ext.data.ArrayStore({
+            id: 'attribute',
+            fields: ['attribute', 'label'],
+            data: attributes
+          }),
+          valueField: 'attribute',
+          value: filter.attribute,
+          displayField: 'label',
+          listeners: {
+            select: (combo, record) => {
+              this.state.filterState.updateFilter(filter.id, {
+                attribute: record.data.attribute
+              })
+            }
+          }
         },
+        {
+          xtype: 'combo',
+          name: 'operator',
+          triggerAction: 'all',
+          emptyText: 'Operator',
+          width: 72,
+          mode: 'local',
+          forceSelection: true,
+          editable: false,
+          store: new Ext.data.ArrayStore({
+            id: 'operator',
+            fields: ['operator', 'label'],
+            data: operators.map(operator => [operator, this.getOperatorLabel(operator)])
+          }),
+          valueField: 'operator',
+          value: filter.operator,
+          displayField: 'label',
+          listeners: {
+            select: (combo, record) => {
+              this.state.filterState.updateFilter(filter.id, {
+                operator: record.data.operator
+              })
+            }
+          }
+        },
+        {
+          xtype: 'textfield',
+          name: 'value',
+          emptyText: 'Value',
+          value: filter.value,
+          enableKeyEvents: true,
+          flex: 2,
+          listeners: {
+            change: (component, value) => {
+              this.state.filterState.updateFilter(filter.id, { value })
+            },
+            keypress: (component, event) => {
+              if (event.getKey() === event.ENTER) {
+                this.state.filterState.updateFilter(filter.id, {
+                  value: component.getValue()
+                })
+              }
+            }
+          }
+        },
+        {
+          xtype: 'button',
+          iconCls: 'icn_delete',
+          tooltip: 'Remove condition',
+          width: 22,
+          margins: '0 2px',
+          listeners: {
+            click: () => {
+              this.state.filterState.removeFilter(filter.id)
+            }
+          }
+        },
+        {
+          xtype: 'button',
+          iconCls: 'icn_add',
+          tooltip: 'Add condition',
+          width: 22,
+          margins: '0 3px 0 2px',
+          listeners: {
+            click: () => {
+              this.state.filterState.addFilter(group.id, this.getDefaultFilter(cube))
+            }
+          }
+        }
+      ]
+    }
+  },
+
+  renderGroup: function (cube, group, isRoot = false) {
+    const filters = group.filters || []
+    const items = [
+      {
+        xtype: 'container',
+        cls: 'filter-group-header',
+        layout: 'hbox',
         items: [
           {
+            xtype: 'label',
+            cls: 'filter-group-label',
+            text: 'Match',
+            width: 38,
+            margins: '0 4px 0 5px'
+          },
+          {
             xtype: 'combo',
-            name: 'entity',
-            emptyText: 'Entity',
+            name: 'logic',
             triggerAction: 'all',
-            width: 70,
             mode: 'local',
             forceSelection: true,
             editable: false,
+            width: 84,
+            margins: '4px 4px 4px 0',
             store: new Ext.data.ArrayStore({
-              id: 'type',
-              fields: ['type', 'name'],
-              data: app_data.entities
+              id: 'logic',
+              fields: ['logic', 'label'],
+              data: [
+                ['and', 'all (AND)'],
+                ['or', 'any (OR)']
+              ]
             }),
-            valueField: 'type',
-            value: f.entity,
-            displayField: 'name',
+            valueField: 'logic',
+            value: group.logic,
+            displayField: 'label',
             listeners: {
-              select: (c, r, i) => {
-                this.state.filterState.filters.update(f.id, {
-                  entity: r.data.type,
-                  attribute: 'key'
+              select: (combo, record) => {
+                this.state.filterState.updateFilter(group.id, {
+                  logic: record.data.logic
                 })
               }
             }
           },
           {
-            xtype: 'combo',
-            name: 'attribute',
-            emptyText: 'Attribute',
-            triggerAction: 'all',
-            width: 100,
-            mode: 'local',
-            forceSelection: true,
-            editable: false,
-            store: new Ext.data.ArrayStore({
-              id: 'type',
-              fields: ['entity', 'type', 'name'],
-              data: app_data.attributes.filter(r => r[0] === f.entity)
-            }),
-            valueField: 'type',
-            value: f.attribute,
-            displayField: 'name',
-            listeners: {
-              select: (c, r, i) => {
-                this.state.filterState.filters.update(f.id, {
-                  attribute: r.data.type
-                })
-              }
-            }
+            xtype: 'label',
+            cls: 'filter-group-label',
+            text: 'of these',
+            width: 44,
+            margins: '0 4px 0 0'
           },
           {
-            xtype: 'combo',
-            name: 'operator',
-            triggerAction: 'all',
-            emptyText: 'OP',
-            width: 39,
-            mode: 'local',
-            forceSelection: true,
-            editable: false,
-            store: new Ext.data.ArrayStore({
-              id: 'type',
-              fields: ['type', 'name'],
-              data: app_data.operators
-            }),
-            valueField: 'type',
-            value: f.operator,
-            displayField: 'name',
-            listeners: {
-              select: (c, r, i) => {
-                this.state.filterState.filters.update(f.id, {
-                  operator: r.data.type
-                })
-              }
-            }
+            xtype: 'container',
+            flex: 1
           },
-          {
-            xtype: 'textfield',
-            name: 'value',
-            value: f.value,
-            enableKeyEvents: true,
-            listeners: {
-              change: (c, v) => {
-                this.state.filterState.filters.update(f.id, { value: v })
-              },
-              keypress: (c, e) => {
-                if (e.getKey() === e.ENTER) {
-                  this.state.filterState.filters.update(f.id, {
-                    value: c.getValue()
-                  })
+          ...(!isRoot
+            ? [
+                {
+                  xtype: 'button',
+                  iconCls: 'icn_delete',
+                  tooltip: 'Remove group',
+                  width: 22,
+                  margins: '4px 2px',
+                  listeners: {
+                    click: () => {
+                      this.state.filterState.removeFilter(group.id)
+                    }
+                  }
                 }
-              }
-            }
-          },
-          {
-            xtype: 'button',
-            iconCls: 'icn_delete',
-            width: 22,
-            listeners: {
-              click: () => {
-                if (this.state.filterState.filters.values.length === 1) {
-                  return
-                }
-
-                this.state.filterState.filters.remove(f.id)
-              }
-            }
-          },
+              ]
+            : []),
           {
             xtype: 'button',
             iconCls: 'icn_add',
+            tooltip: 'Add group',
             width: 22,
-            margins: '0',
+            margins: '4px 2px',
             listeners: {
               click: () => {
-                this.state.filterState.filters.add({
-                  entity: 'Grave',
-                  attribute: 'key',
-                  operator: 'in'
-                })
+                this.state.filterState.addFilterGroup(group.id, this.getDefaultFilter(cube))
               }
             }
           }
         ]
       }
+    ]
+
+    if (filters.length === 0) {
+      items.push({
+        xtype: 'container',
+        cls: 'filter-empty',
+        layout: 'hbox',
+        items: [
+          {
+            xtype: 'container',
+            cls: 'filter-empty-message',
+            html: 'No conditions in this group.',
+            flex: 1
+          },
+          {
+            xtype: 'button',
+            iconCls: 'icn_add',
+            tooltip: 'Add condition',
+            width: 22,
+            margins: '0 3px 0 2px',
+            listeners: {
+              click: () => {
+                this.state.filterState.addFilter(group.id, this.getDefaultFilter(cube))
+              }
+            }
+          }
+        ]
+      })
     }
 
-    const state = mobx.toJS(this.state.filterState.filters.values)
+    filters.forEach(filter => {
+      items.push(
+        Array.isArray(filter.filters)
+          ? this.renderGroup(cube, filter)
+          : this.renderCondition(cube, group, filter)
+      )
+    })
 
-    let filters = []
-    filters = state.map(toFilter)
 
+    return {
+      xtype: 'container',
+      cls: isRoot ? 'filter-group filter-group-root' : 'filter-group',
+      anchor: '100%',
+      items
+    }
+  },
+
+  renderFilters: function () {
+    const cube = this.getCube()
+    if (!cube) {
+      return
+    }
+
+    const filters = mobx.toJS(this.state.filterState.filters)
     this.removeAll()
 
     this.add({
@@ -171,9 +334,7 @@ X.Filter = Ext.extend(Ext.form.FormPanel, {
           store: new Ext.data.ArrayStore({
             id: 'id',
             fields: ['id', 'name'],
-            data: [
-              [1, 'Grobišče Župna cerkev v Kranju']
-            ]
+            data: [[1, 'Grobišče Župna cerkev v Kranju']]
           }),
           valueField: 'id',
           value: 1,
@@ -184,8 +345,42 @@ X.Filter = Ext.extend(Ext.form.FormPanel, {
 
     this.add({
       xtype: 'fieldset',
+      title: 'Cubes',
+      items: [
+        {
+          xtype: 'combo',
+          name: 'cube',
+          hideLabel: true,
+          anchor: '100%',
+          triggerAction: 'all',
+          mode: 'local',
+          forceSelection: true,
+          editable: false,
+          store: new Ext.data.ArrayStore({
+            id: 'name',
+            fields: ['name', 'label'],
+            data: app_data.cubes.map(item => [item.name, item.label])
+          }),
+          valueField: 'name',
+          value: cube.name,
+          displayField: 'label',
+          listeners: {
+            select: (combo, record) => {
+              const nextCube = app_data.getCube(record.data.name)
+              mobx.transaction(() => {
+                this.state.filterState.cube.set('name', nextCube.name)
+                this.state.filterState.clearFilters()
+              })
+            }
+          }
+        }
+      ]
+    })
+
+    this.add({
+      xtype: 'fieldset',
       title: 'Filters',
-      items: filters
+      items: [this.renderGroup(cube, filters, true)]
     })
 
     this.doLayout()

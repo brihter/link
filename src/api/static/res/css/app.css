@@ -37,6 +37,14 @@
   margin: 0;
 }
 
+.view-message {
+  margin: 40px auto;
+  color: #555;
+  font-family: tahoma,arial,verdana,sans-serif;
+  font-size: 12px;
+  text-align: center;
+}
+
 div.x-toolbar.overview-tbar-options {
   padding-left: 4px;
 }
@@ -49,4 +57,111 @@ div.x-toolbar.overview-tbar-options {
   position:unset;
   vertical-align: top;
   margin: 0 0 0 4px;
+}
+
+.overview-bbar-status .view-legend {
+  display: block;
+  line-height: 22px;
+  margin-left: 2px;
+  white-space: nowrap;
+}
+
+.filter-bbar-help .filter-help {
+  display: block;
+  line-height: 22px;
+  margin-left: 2px;
+  white-space: nowrap;
+}
+
+.filter-bbar-help strong {
+  font-weight: bold;
+}
+
+.filter-group {
+  border: 1px solid #c7d5e8;
+  background: #f7f9fc;
+  color: #333;
+  font: normal 11px tahoma, arial, helvetica, sans-serif;
+  margin: 4px 0;
+  padding: 6px;
+}
+
+
+.filter-group-header {
+  box-sizing: border-box;
+  height: 32px;
+  border: 1px solid #d5e1ef;
+  background: #edf4fb;
+  margin-bottom: 6px;
+}
+
+.filter-group-label {
+  display: block;
+  color: #15428b;
+  font: bold 11px tahoma, arial, helvetica, sans-serif;
+  line-height: 30px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.filter-condition {
+  height: 22px;
+  margin-bottom: 4px;
+}
+
+.filter-condition:last-child {
+  margin-bottom: 0;
+}
+
+
+.filter-empty {
+  color: #666;
+  font: normal 11px tahoma, arial, helvetica, sans-serif;
+  line-height: 22px;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+}
+
+.filter-empty-message {
+  line-height: 22px;
+  padding-left: 3px;
+}
+
+
+.table-paging-toolbar .table-shortcuts {
+  display: block;
+  line-height: 22px;
+  margin: 0 4px 0 2px;
+  white-space: nowrap;
+}
+
+.table-paging-toolbar strong {
+  font-weight: bold;
+}
+
+.view-cube-label strong {
+  font-weight: bold;
+}
+
+.table-filtered-header {
+  font-weight: bold;
+}
+
+.overview-bbar-status .view-legend-swatch {
+  box-sizing: border-box;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid #99bbe8;
+  margin: 0 4px;
+  vertical-align: -1px;
+}
+
+.overview-bbar-status .view-legend-selected {
+  background-color: yellow;
+}
+
+.overview-bbar-status .view-legend-c14 {
+  background-color: lightcoral;
 }

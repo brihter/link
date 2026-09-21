@@ -46,8 +46,11 @@
 
     Ext.onReady(function () {
       Ext.QuickTips.init()
-      app(app_state())
-    });
+      app_data
+        .load()
+        .then(() => app(app_state()))
+        .catch(() => Ext.MessageBox.alert('Error', 'Could not load cubes.'))
+    })
   </script>
 </body>
 </html>

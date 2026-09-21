@@ -53,6 +53,9 @@ const grave_xref_grave = ({ storage }) => {
       y = Array.from(new Set(y.split('=')))
     }
 
+    // console.log(rec)
+    // console.log(x, y)
+
     const cross = []
     for (let i = 0; i < x.length; i++) {
       for (let j = 0; j < y.length; j++) {
@@ -65,6 +68,8 @@ const grave_xref_grave = ({ storage }) => {
         })
       }
     }
+
+    //console.log(cross)
 
     return cross
   }

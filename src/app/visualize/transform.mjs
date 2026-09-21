@@ -98,15 +98,21 @@ const getPathNodes = (paths, params = {}) => {
 // }
 
 const extractNodes = paths => {
-  let nodes = []
+  const nodes = []
+  const identities = new Set()
 
-  nodes = paths
-    .map(p => p.segments)
-    .flat()
-    .map(s => [s.start, s.end])
-    .flat()
-
-  nodes = uniqBy(nodes, n => n.elementId)
+  for (const path of paths) {
+    for (const segment of path.segments) {
+      if (!identities.has(segment.start.elementId)) {
+        identities.add(segment.start.elementId)
+        nodes.push(segment.start)
+      }
+      if (!identities.has(segment.end.elementId)) {
+        identities.add(segment.end.elementId)
+        nodes.push(segment.end)
+      }
+    }
+  }
 
   return nodes
 }
