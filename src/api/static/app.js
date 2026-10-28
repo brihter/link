@@ -39,7 +39,7 @@ app = state => {
             <img src="res/img/ioa.svg" alt="IOA" style="height:30px;width:auto;">
             <div>
               <strong>Link</strong> <br />
-              Stratigraphic Analysis, v0.2.0 (c) ZRC SAZU, Institute of Archaeology
+              Stratigraphic Analysis, v0.3.1 (c) ZRC SAZU, Institute of Archaeology
             </div>
           </div>
         `,
